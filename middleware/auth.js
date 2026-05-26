@@ -1,71 +1,147 @@
 const jwt = require("jsonwebtoken");
+
 const User = require("../models/User");
 
-const isAuthenticated = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
+// ===================================
+// AUTHENTICATION
+// ===================================
 
-    // Header check
+const isAuthenticated = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const authHeader =
+      req.headers.authorization;
+
+    // =========================
+    // TOKEN CHECK
+    // =========================
+
     if (!authHeader) {
       return res.status(401).json({
         success: false,
-        message: "No token provided",
+        message:
+          "No token provided",
       });
     }
 
-    // Bearer token split
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.split(" ")[1]
-      : authHeader;
+    // =========================
+    // GET TOKEN
+    // =========================
 
-    // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
+    const token =
+      authHeader.startsWith(
+        "Bearer ",
+      )
+        ? authHeader.split(" ")[1]
+        : authHeader;
+
+    // =========================
+    // VERIFY TOKEN
+    // =========================
+
+    const decoded =
+      jwt.verify(
+        token,
+        process.env.JWT_SECRET,
+      );
+
+    console.log(
+      "DECODED TOKEN =>",
+      decoded,
     );
 
-    // User fetch
-    const user = await User.findById(decoded.userId).select("-password");
+    // =========================
+    // USER ID FIX
+    // =========================
+
+    const userId =
+      decoded.userId ||
+      decoded._id ||
+      decoded.id;
+
+    // =========================
+    // FIND USER
+    // =========================
+
+    const user =
+      await User.findById(
+        userId,
+      ).select("-password");
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "User not found",
+        message:
+          "User not found",
       });
     }
+
+    console.log(
+      "AUTH USER =>",
+      user,
+    );
+
+    // =========================
+    // SAVE USER
+    // =========================
 
     req.user = user;
 
     next();
-
   } catch (error) {
-    console.log("AUTH ERROR:", error);
+    console.log(
+      "AUTH ERROR =>",
+      error,
+    );
 
     return res.status(401).json({
       success: false,
-      message: "Invalid token",
+      message:
+        "Invalid token",
     });
   }
 };
 
+// ===================================
 // ADMIN CHECK
-const isAdmin = (req, res, next) => {
-  try {
+// ===================================
 
-    // Agar role field nahi hai to remove kar dena
-    if (req.user.role !== "admin") {
+const isAdmin = (
+  req,
+  res,
+  next,
+) => {
+  try {
+    console.log(
+      "USER ROLE =>",
+      req.user?.role,
+    );
+
+    if (
+      req.user?.role !==
+      "admin"
+    ) {
       return res.status(403).json({
         success: false,
-        message: "Admin access denied",
+        message:
+          "Admin access denied",
       });
     }
 
     next();
-
   } catch (error) {
-    res.status(500).json({
+    console.log(
+      "ADMIN ERROR =>",
+      error,
+    );
+
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message:
+        error.message,
     });
   }
 };

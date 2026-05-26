@@ -8,167 +8,289 @@ const User = require("../models/User");
 
 const router = express.Router();
 
-// ======================
-// REGISTER
-// ======================
+// ==============================
+// GENERATE TOKEN
+// ==============================
+
+const generateToken = user => {
+  return jwt.sign(
+    {
+      _id: user._id,
+      id: user._id,
+
+      name: user.name,
+      email: user.email,
+
+      // ✅ IMPORTANT
+      role: user.role || "user",
+    },
+
+    process.env.JWT_SECRET,
+
+    {
+      expiresIn: "30d",
+    },
+  );
+};
+
+// ==============================
+// REGISTER USER
+// ==============================
 
 router.post(
   "/register",
+
   async (req, res) => {
-
     try {
-
       const {
         name,
         email,
         password,
       } = req.body;
 
+      // ==============================
+      // VALIDATION
+      // ==============================
+
+      if (
+        !name?.trim() ||
+        !email?.trim() ||
+        !password?.trim()
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "All fields are required",
+        });
+      }
+
+      // ==============================
+      // CHECK USER
+      // ==============================
+
       const userExists =
         await User.findOne({
-          email,
+          email:
+            email.toLowerCase(),
         });
 
       if (userExists) {
-
-        return res
-          .status(400)
-          .json({
-            message:
-              "User already exists",
-          });
-
+        return res.status(400).json({
+          success: false,
+          message:
+            "User already exists",
+        });
       }
+
+      // ==============================
+      // HASH PASSWORD
+      // ==============================
 
       const hashedPassword =
         await bcrypt.hash(
           password,
-          10
+          10,
         );
+
+      // ==============================
+      // CREATE USER
+      // ==============================
 
       const user =
         await User.create({
-          name,
-          email,
+          name: name.trim(),
+
+          email:
+            email.toLowerCase(),
+
           password:
             hashedPassword,
+
+          // ✅ DEFAULT ROLE
+          role: "user",
         });
 
-      res.json({
+      // ==============================
+      // TOKEN
+      // ==============================
+
+      const token =
+        generateToken(user);
+
+      // ==============================
+      // RESPONSE
+      // ==============================
+
+      return res.status(201).json({
         success: true,
-        user,
-      });
 
+        message:
+          "Registration Successful",
+
+        token,
+
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      });
     } catch (error) {
+      console.log(
+        "REGISTER ERROR =>",
+        error,
+      );
 
-      res.status(500).json({
-        message: error.message,
+      return res.status(500).json({
+        success: false,
+        message:
+          error.message ||
+          "Server Error",
       });
-
     }
-  }
+  },
 );
 
-// ======================
-// LOGIN
-// ======================
+// ==============================
+// LOGIN USER
+// ==============================
 
 router.post(
   "/login",
+
   async (req, res) => {
-
     try {
-
       const {
         email,
         password,
       } = req.body;
 
+      // ==============================
+      // VALIDATION
+      // ==============================
+
+      if (
+        !email?.trim() ||
+        !password?.trim()
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Email & Password required",
+        });
+      }
+
+      // ==============================
+      // FIND USER
+      // ==============================
+
       const user =
         await User.findOne({
-          email,
+          email:
+            email.toLowerCase(),
         });
 
       if (!user) {
-
-        return res
-          .status(400)
-          .json({
-            message:
-              "User not found",
-          });
-
+        return res.status(400).json({
+          success: false,
+          message:
+            "User not found",
+        });
       }
+
+      // ==============================
+      // CHECK PASSWORD
+      // ==============================
 
       const isMatch =
         await bcrypt.compare(
           password,
-          user.password
+          user.password,
         );
 
       if (!isMatch) {
-
-        return res
-          .status(400)
-          .json({
-            message:
-              "Invalid password",
-          });
-
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid password",
+        });
       }
 
-      const token = jwt.sign(
-        {
-          userId: user._id,
+      // ==============================
+      // TOKEN
+      // ==============================
+
+      const token =
+        generateToken(user);
+
+      // ==============================
+      // RESPONSE
+      // ==============================
+
+      return res.status(200).json({
+        success: true,
+
+        message:
+          "Login Successful",
+
+        token,
+
+        user: {
+          _id: user._id,
+          name: user.name,
           email: user.email,
+          role: user.role,
         },
-        process.env.JWT_SECRET,
-        {
-          expiresIn: "7d",
-        }
+      });
+    } catch (error) {
+      console.log(
+        "LOGIN ERROR =>",
+        error,
       );
 
-      res.json({
-        success: true,
-        token,
-        user,
+      return res.status(500).json({
+        success: false,
+        message:
+          error.message ||
+          "Server Error",
       });
-
-    } catch (error) {
-
-      res.status(500).json({
-        message: error.message,
-      });
-
     }
-  }
+  },
 );
 
-// ======================
-// GET USERS
-// ======================
+// ==============================
+// GET ALL USERS
+// ==============================
 
 router.get(
   "/users",
+
   async (req, res) => {
-
     try {
-
       const users =
         await User.find().select(
-          "-password"
+          "-password",
         );
 
-      res.json(users);
-
-    } catch (error) {
-
-      res.status(500).json({
-        message: error.message,
+      return res.status(200).json({
+        success: true,
+        users,
       });
+    } catch (error) {
+      console.log(
+        "GET USERS ERROR =>",
+        error,
+      );
 
+      return res.status(500).json({
+        success: false,
+        message:
+          error.message ||
+          "Server Error",
+      });
     }
-  }
+  },
 );
 
 module.exports = router;
