@@ -8,46 +8,42 @@ const {
   getSingleOrder,
   updateOrderStatus,
   updateOrderCategory,
-  getCategories,
   deleteOrder,
+  getCategories,
 } = require("../controllers/orderController");
 
 const { isAuthenticated, isAdmin } = require("../middleware/auth");
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Public / User Routes
+// STATIC ROUTES PEHLE (warna /:id "categories" ko ID samajh leta hai)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// GET  /api/orders/categories     →  Saari categories + count
-router.get("/categories", isAuthenticated, getCategories);
+// GET  /api/orders/categories  →  Saari categories (PUBLIC - no auth)
+router.get("/categories", getCategories);
 
-// POST /api/orders                →  Naya order banao
-router.post("/", isAuthenticated, createOrder);
-
-// GET  /api/orders/my-orders      →  Apne saare orders
-// GET  /api/orders/my-orders?category=Fashion  →  Category filter
+// GET  /api/orders/my-orders   →  Apne orders (logged in user)
 router.get("/my-orders", isAuthenticated, getMyOrders);
 
-// GET  /api/orders/:id            →  Single order
-router.get("/:id", isAuthenticated, getSingleOrder);
+// POST /api/orders             →  Naya order banao
+router.post("/", isAuthenticated, createOrder);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Admin Routes
-// ─────────────────────────────────────────────────────────────────────────────
-
-// GET   /api/orders               →  Saare orders (admin)
-// GET   /api/orders?category=Electronics          →  Category filter
-// GET   /api/orders?category=Electronics&sort=price_desc  →  Filter + sort
-// GET   /api/orders?status=pending                →  Status filter
+// GET  /api/orders             →  Saare orders (Admin only)
 router.get("/", isAuthenticated, isAdmin, getAllOrders);
 
-// PATCH /api/orders/:id/status    →  Status update
+// ─────────────────────────────────────────────────────────────────────────────
+// DYNAMIC ROUTES BAAD MEIN
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET    /api/orders/:id            →  Single order
+router.get("/:id", isAuthenticated, getSingleOrder);
+
+// PATCH  /api/orders/:id/status     →  Status update (Admin)
 router.patch("/:id/status", isAuthenticated, isAdmin, updateOrderStatus);
 
-// PATCH /api/orders/:id/category  →  Category update  ← NEW
+// PATCH  /api/orders/:id/category   →  Category update (Admin)
 router.patch("/:id/category", isAuthenticated, isAdmin, updateOrderCategory);
 
-// DELETE /api/orders/:id          →  Order delete
+// DELETE /api/orders/:id            →  Order delete (Admin)
 router.delete("/:id", isAuthenticated, isAdmin, deleteOrder);
 
 module.exports = router;
