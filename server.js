@@ -41,7 +41,7 @@ app.use(
 // ==========================
 
 app.use("/api/auth", require("./routes/authRoutes"));
-
+app.use("/api/orders", orderRoutes);
 app.get("/", (req, res) => {
   res.send("API RUNNING");
 });
