@@ -4,7 +4,7 @@ const cors = require("cors");
 const http = require("http");
 const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
-
+const orderRoutes = require("./routes/orderRoutes");
 const connectDB = require("./config/db");
 const Message = require("./models/Message");
 
