@@ -163,31 +163,74 @@ exports.getMyOrders = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/orders/:id  →  Single order dekho
 // ─────────────────────────────────────────────────────────────────────────────
-exports.getSingleOrder = async (req, res) => {
+exports.getSingleOrder = async (
+  req,
+  res
+) => {
   try {
-    const order = await Order.findById(
-      req.params.id,
-    )
-      .populate(
+    const order =
+      await Order.findById(
+        req.params.id
+      ).populate(
         "user",
-        "name email",
+        "name email"
       );
 
     // ORDER NOT FOUND
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Order not found",
+        message:
+          "Order not found",
       });
     }
 
-    // ADMIN CAN ACCESS ALL ORDERS
-    // USER CAN ACCESS ONLY OWN ORDER
+    // DEBUG LOGS
+    console.log(
+      "REQ USER =>",
+      req.user
+    );
+
+    console.log(
+      "ORDER USER =>",
+      order.user
+    );
+
+    // SAFE VALUES
+    const reqUserId =
+      req.user?._id?.toString();
+
+    const orderUserId =
+      order.user?._id?.toString();
+
+    const userRole =
+      req.user?.role || "user";
+
+    console.log(
+      "REQ USER ID =>",
+      reqUserId
+    );
+
+    console.log(
+      "ORDER USER ID =>",
+      orderUserId
+    );
+
+    console.log(
+      "ROLE =>",
+      userRole
+    );
+
+    // ACCESS CHECK
+    const isAdmin =
+      userRole === "admin";
+
+    const isOwner =
+      reqUserId === orderUserId;
 
     if (
-      req.user.role !== "admin" &&
-      order.user._id.toString() !==
-        req.user._id.toString()
+      !isAdmin &&
+      !isOwner
     ) {
       return res.status(403).json({
         success: false,
@@ -196,17 +239,18 @@ exports.getSingleOrder = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    // SUCCESS
+    return res.status(200).json({
       success: true,
       order,
     });
   } catch (error) {
     console.log(
       "GET SINGLE ORDER ERROR =>",
-      error,
+      error
     );
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message:
         error.message ||

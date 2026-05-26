@@ -1,7 +1,5 @@
 const User = require("../models/User");
-
 const bcrypt = require("bcryptjs");
-
 const jwt = require("jsonwebtoken");
 
 // ==========================
@@ -9,22 +7,18 @@ const jwt = require("jsonwebtoken");
 // ==========================
 
 const generateToken = (user) => {
-
   return jwt.sign(
     {
-      // ✅ IMPORTANT FOR SOCKET
-
+      // USER ID
       id: user._id,
-
-      // ✅ BACKWARD COMPATIBILITY
-
       _id: user._id,
 
-      // ✅ EXTRA USER DATA
-
+      // USER INFO
       name: user.name,
-
       email: user.email,
+
+      // ✅ IMPORTANT
+      role: user.role || "user",
     },
 
     process.env.JWT_SECRET,
@@ -43,9 +37,7 @@ const registerUser = async (
   req,
   res
 ) => {
-
   try {
-
     const {
       name,
       email,
@@ -61,7 +53,6 @@ const registerUser = async (
       !email?.trim() ||
       !password?.trim()
     ) {
-
       return res.status(400).json({
         success: false,
         message:
@@ -70,7 +61,7 @@ const registerUser = async (
     }
 
     // ==========================
-    // CHECK USER
+    // CHECK EXISTING USER
     // ==========================
 
     const existingUser =
@@ -80,7 +71,6 @@ const registerUser = async (
       });
 
     if (existingUser) {
-
       return res.status(400).json({
         success: false,
         message:
@@ -114,10 +104,13 @@ const registerUser = async (
 
         password:
           hashedPassword,
+
+        // ✅ DEFAULT ROLE
+        role: "user",
       });
 
     // ==========================
-    // TOKEN
+    // GENERATE TOKEN
     // ==========================
 
     const token =
@@ -139,11 +132,10 @@ const registerUser = async (
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
-
   } catch (error) {
-
     console.log(
       "REGISTER ERROR:",
       error
@@ -165,9 +157,7 @@ const loginUser = async (
   req,
   res
 ) => {
-
   try {
-
     const {
       email,
       password,
@@ -181,7 +171,6 @@ const loginUser = async (
       !email?.trim() ||
       !password?.trim()
     ) {
-
       return res.status(400).json({
         success: false,
         message:
@@ -200,7 +189,6 @@ const loginUser = async (
       });
 
     if (!user) {
-
       return res.status(400).json({
         success: false,
         message:
@@ -219,7 +207,6 @@ const loginUser = async (
       );
 
     if (!isMatch) {
-
       return res.status(400).json({
         success: false,
         message:
@@ -228,7 +215,7 @@ const loginUser = async (
     }
 
     // ==========================
-    // TOKEN
+    // GENERATE TOKEN
     // ==========================
 
     const token =
@@ -250,11 +237,12 @@ const loginUser = async (
         _id: user._id,
         name: user.name,
         email: user.email,
+
+        // ✅ SEND ROLE
+        role: user.role,
       },
     });
-
   } catch (error) {
-
     console.log(
       "LOGIN ERROR:",
       error
@@ -276,20 +264,17 @@ const getAllUsers = async (
   req,
   res
 ) => {
-
   try {
-
     const users =
       await User.find().select(
         "-password"
       );
 
-    return res.status(200).json(
-      users
-    );
-
+    return res.status(200).json({
+      success: true,
+      users,
+    });
   } catch (error) {
-
     console.log(
       "GET USERS ERROR:",
       error
@@ -307,4 +292,4 @@ module.exports = {
   registerUser,
   loginUser,
   getAllUsers,
-};  
+};
