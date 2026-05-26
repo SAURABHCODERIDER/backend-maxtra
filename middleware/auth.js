@@ -1,40 +1,76 @@
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-const auth = (
-  req,
-  res,
-  next
-) => {
-
+const isAuthenticated = async (req, res, next) => {
   try {
+    const authHeader = req.headers.authorization;
 
-    const token =
-      req.headers.authorization;
-
-    if (!token) {
-
+    // Header check
+    if (!authHeader) {
       return res.status(401).json({
-        message: "No Token",
+        success: false,
+        message: "No token provided",
       });
-
     }
 
+    // Bearer token split
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : authHeader;
+
+    // Verify token
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET
     );
 
-    req.user = decoded;
+    // User fetch
+    const user = await User.findById(decoded.userId).select("-password");
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    req.user = user;
 
     next();
 
   } catch (error) {
+    console.log("AUTH ERROR:", error);
 
-    res.status(401).json({
-      message: "Invalid Token",
+    return res.status(401).json({
+      success: false,
+      message: "Invalid token",
     });
-
   }
 };
 
-module.exports = authMiddleware;
+// ADMIN CHECK
+const isAdmin = (req, res, next) => {
+  try {
+
+    // Agar role field nahi hai to remove kar dena
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Admin access denied",
+      });
+    }
+
+    next();
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+module.exports = {
+  isAuthenticated,
+  isAdmin,
+};
