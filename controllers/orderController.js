@@ -165,15 +165,34 @@ exports.getMyOrders = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 exports.getSingleOrder = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate(
-      "user",
-      "name email"
-    );
+    const order = await Order.findById(
+      req.params.id,
+    )
+      .populate(
+        "user",
+        "name email",
+      );
 
+    // ORDER NOT FOUND
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Order nahi mila",
+        message: "Order not found",
+      });
+    }
+
+    // ADMIN CAN ACCESS ALL ORDERS
+    // USER CAN ACCESS ONLY OWN ORDER
+
+    if (
+      req.user.role !== "admin" &&
+      order.user._id.toString() !==
+        req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Access denied",
       });
     }
 
@@ -182,8 +201,16 @@ exports.getSingleOrder = async (req, res) => {
       order,
     });
   } catch (error) {
+    console.log(
+      "GET SINGLE ORDER ERROR =>",
+      error,
+    );
+
     res.status(500).json({
-      message: error.message,
+      success: false,
+      message:
+        error.message ||
+        "Server Error",
     });
   }
 };
