@@ -7,13 +7,16 @@ const mongoose = require("mongoose");
 const ORDER_CATEGORIES = [
   "Electronics",
   "Fashion",
-  "Footwear",
-  "Accessories",
-  "Bags",
-  "Groceries",
-  "Home",
-  "Beauty",
-  "Sports",
+  "Home & Furniture",
+  "Appliances",
+  "Beauty & Personal Care",
+  "Toys & Baby",
+  "Sports & Fitness",
+  "Books",
+  "Grocery",
+  "Mobiles",
+  "Automotive",
+  "Food",
   "Other",
 ];
 
@@ -26,15 +29,18 @@ const orderItemSchema =
     id: {
       type: String,
       required: true,
+      trim: true,
     },
 
     title: {
       type: String,
       required: true,
+      trim: true,
     },
 
     image: {
       type: String,
+      default: "",
     },
 
     rating: {
@@ -51,6 +57,7 @@ const orderItemSchema =
     price: {
       type: Number,
       required: true,
+      min: 0,
     },
   });
 
@@ -61,6 +68,7 @@ const orderItemSchema =
 const orderSchema =
   new mongoose.Schema(
     {
+      // USER
       user: {
         type:
           mongoose.Schema.Types.ObjectId,
@@ -79,6 +87,8 @@ const orderSchema =
         default: "Other",
 
         required: true,
+
+        trim: true,
       },
 
       // ITEMS
@@ -86,6 +96,18 @@ const orderSchema =
         type: [orderItemSchema],
 
         required: true,
+
+        validate: {
+          validator: function (v) {
+            return (
+              Array.isArray(v) &&
+              v.length > 0
+            );
+          },
+
+          message:
+            "Order items required",
+        },
       },
 
       // TOTAL PRICE
@@ -93,9 +115,11 @@ const orderSchema =
         type: Number,
 
         required: true,
+
+        min: 0,
       },
 
-      // ORDER STATUS
+      // STATUS
       status: {
         type: String,
 
@@ -109,14 +133,43 @@ const orderSchema =
         default: "pending",
       },
 
-      // SHIPPING
+      // SHIPPING ADDRESS
       shippingAddress: {
-        name: String,
-        phone: String,
-        address: String,
-        city: String,
-        pincode: String,
-        state: String,
+        name: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+
+        phone: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+
+        address: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+
+        city: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+
+        pincode: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+
+        state: {
+          type: String,
+          trim: true,
+          default: "",
+        },
       },
 
       // PAYMENT
@@ -133,6 +186,7 @@ const orderSchema =
         default: "COD",
       },
 
+      // PAYMENT STATUS
       isPaid: {
         type: Boolean,
         default: false,
@@ -142,7 +196,7 @@ const orderSchema =
         type: Date,
       },
 
-      // DELIVERY
+      // DELIVERY STATUS
       isDelivered: {
         type: Boolean,
         default: false,
@@ -176,10 +230,31 @@ orderSchema.index({
 });
 
 // ===================================
-// EXPORT
+// PRE SAVE DEBUG
 // ===================================
 
-module.exports = mongoose.model(
-  "Order",
-  orderSchema,
+orderSchema.pre(
+  "save",
+  function (next) {
+
+    console.log(
+      "ORDER CATEGORY =>",
+      this.category
+    );
+
+    next();
+  },
 );
+
+// ===================================
+// EXPORTS
+// ===================================
+
+module.exports =
+  mongoose.model(
+    "Order",
+    orderSchema,
+  );
+
+module.exports.ORDER_CATEGORIES =
+  ORDER_CATEGORIES;
