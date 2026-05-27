@@ -23,7 +23,6 @@ const ORDER_CATEGORIES = [
 // POST /api/orders  →  Naya order banao
 // Body mein "category" field bhi bhejo (optional, default: "Other")
 // ─────────────────────────────────────────────────────────────────────────────
-const Order = require("../models/Order");
 
 // CREATE ORDER
 exports.createOrder = async (req, res) => {
