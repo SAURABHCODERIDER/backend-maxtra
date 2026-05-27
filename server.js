@@ -7,7 +7,7 @@ const { Server } = require("socket.io");
 const orderRoutes = require("./routes/orderRoutes");
 const connectDB = require("./config/db");
 const Message = require("./models/Message");
-
+const productRoutes = require("./routes/productRoutes");
 // ==========================
 // CONFIG
 // ==========================
@@ -39,9 +39,9 @@ app.use(
 // ==========================
 // ROUTES
 // ==========================
-
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/orders", orderRoutes);
+app.use("/api/products", productRoutes);
 app.get("/", (req, res) => {
   res.send("API RUNNING");
 });

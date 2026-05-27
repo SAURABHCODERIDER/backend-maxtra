@@ -1,27 +1,20 @@
-const express = require('express');
+const express = require("express");
 
 const router = express.Router();
 
-const Product = require('../models/Product');
+const {
+  getProducts,
+  createProduct,
+  getSingleProduct,
+} = require("../controllers/productController");
 
-router.get('/', async (req, res) => {
+// GET ALL PRODUCTS
+router.get("/", getProducts);
 
-  try {
+// GET SINGLE PRODUCT
+router.get("/:id", getSingleProduct);
 
-    const products = await Product.find();
-
-    res.json({
-      success: true,
-      products,
-    });
-
-  } catch (error) {
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+// CREATE PRODUCT
+router.post("/", createProduct);
 
 module.exports = router;
