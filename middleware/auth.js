@@ -35,6 +35,8 @@ const isAuthenticated = async (
         ? authHeader.split(" ")[1]
         : authHeader;
 
+    console.log("TOKEN => ", token);
+
     // =========================
     // VERIFY TOKEN
     // =========================
@@ -54,7 +56,9 @@ const isAuthenticated = async (
     // =========================
 
     const userId =
-      decoded.userId;
+      decoded.userId ||
+      decoded.id ||
+      decoded._id;
 
     if (!userId) {
       return res.status(401).json({
