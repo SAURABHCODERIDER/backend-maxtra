@@ -235,14 +235,12 @@ orderSchema.index({
 
 orderSchema.pre(
   "save",
-  function (next) {
+  async function () {
 
     console.log(
       "ORDER CATEGORY =>",
       this.category
     );
-
-    next();
   },
 );
 
