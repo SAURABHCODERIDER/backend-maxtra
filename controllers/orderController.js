@@ -4,19 +4,19 @@ const Order = require("../models/Order");
 // Flipkart-style Order Categories
 // ─────────────────────────────────────────────────────────────────────────────
 const ORDER_CATEGORIES = [
-  "electronics",
-  "fashion",
-  "home & furniture",
-  "appliances",
-  "beauty & personal care",
-  "toys & baby",
-  "sports & fitness",
-  "books",
-  "grocery",
-  "mobiles",
-  "automotive",
-  "other",
-  "food",
+  "Electronics",
+  "Fashion",
+  "Home & Furniture",
+  "Appliances",
+  "Beauty & Personal Care",
+  "Toys & Baby",
+  "Sports & Fitness",
+  "Books",
+  "Grocery",
+  "Mobiles",
+  "Automotive",
+  "Other",
+  "Food"
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
