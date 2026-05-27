@@ -1,5 +1,10 @@
 const express = require("express");
+
 const router = express.Router();
+
+// ===============================
+// CONTROLLERS
+// ===============================
 
 const {
   createOrder,
@@ -12,28 +17,55 @@ const {
   getCategories,
 } = require("../controllers/orderController");
 
+// ===============================
+// MIDDLEWARE
+// ===============================
+
 const {
   isAuthenticated,
   isAdmin,
 } = require("../middleware/auth");
 
-// PUBLIC
-router.get("/categories", getCategories);
+// ======================================================
+// PUBLIC ROUTES
+// ======================================================
 
-// USER
+// GET ALL CATEGORIES
 router.get(
-  "/my-orders",
-  isAuthenticated,
-  getMyOrders
+  "/categories",
+  getCategories
 );
 
+// ======================================================
+// USER ROUTES
+// ======================================================
+
+// CREATE ORDER
 router.post(
   "/",
   isAuthenticated,
   createOrder
 );
 
-// ADMIN
+// GET MY ORDERS
+router.get(
+  "/my-orders",
+  isAuthenticated,
+  getMyOrders
+);
+
+// GET SINGLE ORDER
+router.get(
+  "/:id",
+  isAuthenticated,
+  getSingleOrder
+);
+
+// ======================================================
+// ADMIN ROUTES
+// ======================================================
+
+// GET ALL ORDERS
 router.get(
   "/",
   isAuthenticated,
@@ -41,14 +73,7 @@ router.get(
   getAllOrders
 );
 
-// SINGLE ORDER
-router.get(
-  "/:id",
-  isAuthenticated,
-  getSingleOrder
-);
-
-// UPDATE STATUS
+// UPDATE ORDER STATUS
 router.patch(
   "/:id/status",
   isAuthenticated,
@@ -56,7 +81,7 @@ router.patch(
   updateOrderStatus
 );
 
-// UPDATE CATEGORY
+// UPDATE ORDER CATEGORY
 router.patch(
   "/:id/category",
   isAuthenticated,
@@ -64,12 +89,14 @@ router.patch(
   updateOrderCategory
 );
 
-// DELETE
+// DELETE ORDER
 router.delete(
   "/:id",
   isAuthenticated,
   isAdmin,
   deleteOrder
 );
+
+// ======================================================
 
 module.exports = router;
