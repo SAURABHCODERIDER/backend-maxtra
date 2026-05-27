@@ -1,5 +1,4 @@
 const jwt = require("jsonwebtoken");
-
 const User = require("../models/User");
 
 // ===================================
@@ -12,6 +11,7 @@ const isAuthenticated = async (
   next,
 ) => {
   try {
+
     const authHeader =
       req.headers.authorization;
 
@@ -22,8 +22,7 @@ const isAuthenticated = async (
     if (!authHeader) {
       return res.status(401).json({
         success: false,
-        message:
-          "No token provided",
+        message: "No token provided",
       });
     }
 
@@ -32,9 +31,7 @@ const isAuthenticated = async (
     // =========================
 
     const token =
-      authHeader.startsWith(
-        "Bearer ",
-      )
+      authHeader.startsWith("Bearer ")
         ? authHeader.split(" ")[1]
         : authHeader;
 
@@ -42,47 +39,44 @@ const isAuthenticated = async (
     // VERIFY TOKEN
     // =========================
 
-    const decoded =
-      jwt.verify(
-        token,
-        process.env.JWT_SECRET,
-      );
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET,
+    );
 
     console.log(
-      "DECODED TOKEN =>",
+      "DECODED TOKEN => ",
       decoded,
     );
 
     // =========================
-    // USER ID FIX
+    // GET USER ID
     // =========================
 
     const userId =
-      decoded.userId ||
-      decoded._id ||
-      decoded.id;
+      decoded.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token payload",
+      });
+    }
 
     // =========================
     // FIND USER
     // =========================
 
     const user =
-      await User.findById(
-        userId,
-      ).select("-password");
+      await User.findById(userId)
+        .select("-password");
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message:
-          "User not found",
+        message: "User not found",
       });
     }
-
-    console.log(
-      "AUTH USER =>",
-      user,
-    );
 
     // =========================
     // SAVE USER
@@ -90,17 +84,23 @@ const isAuthenticated = async (
 
     req.user = user;
 
-    next();
-  } catch (error) {
     console.log(
-      "AUTH ERROR =>",
+      "AUTH USER => ",
+      req.user,
+    );
+
+    next();
+
+  } catch (error) {
+
+    console.log(
+      "AUTH ERROR => ",
       error,
     );
 
     return res.status(401).json({
       success: false,
-      message:
-        "Invalid token",
+      message: "Invalid token",
     });
   }
 };
@@ -114,34 +114,30 @@ const isAdmin = (
   res,
   next,
 ) => {
+
   try {
-    console.log(
-      "USER ROLE =>",
-      req.user?.role,
-    );
 
     if (
-      req.user?.role !==
-      "admin"
+      req.user?.role !== "admin"
     ) {
       return res.status(403).json({
         success: false,
-        message:
-          "Admin access denied",
+        message: "Admin access denied",
       });
     }
 
     next();
+
   } catch (error) {
+
     console.log(
-      "ADMIN ERROR =>",
+      "ADMIN ERROR => ",
       error,
     );
 
     return res.status(500).json({
       success: false,
-      message:
-        error.message,
+      message: error.message,
     });
   }
 };

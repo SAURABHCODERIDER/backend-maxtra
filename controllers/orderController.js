@@ -23,20 +23,41 @@ const ORDER_CATEGORIES = [
 // POST /api/orders  →  Naya order banao
 // Body mein "category" field bhi bhejo (optional, default: "Other")
 // ─────────────────────────────────────────────────────────────────────────────
+const Order = require("../models/Order");
+
+// CREATE ORDER
 exports.createOrder = async (req, res) => {
   try {
-    // Category validate karo
-    const category = req.body.category || "Other";
 
-    if (!ORDER_CATEGORIES.includes(category)) {
+    const {
+      items,
+      totalPrice,
+      shippingAddress,
+      paymentMethod,
+      category,
+    } = req.body;
+
+    // ✅ USER FROM TOKEN
+    const userId = req.user._id;
+
+    if (!items || items.length === 0) {
       return res.status(400).json({
         success: false,
-        message: `Invalid category. Allowed categories: ${ORDER_CATEGORIES.join(", ")}`,
+        message: "No order items",
       });
     }
 
     const order = await Order.create({
-      ...req.body,
+      user: userId,
+
+      items,
+
+      totalPrice,
+
+      shippingAddress,
+
+      paymentMethod,
+
       category,
     });
 
@@ -44,8 +65,13 @@ exports.createOrder = async (req, res) => {
       success: true,
       order,
     });
+
   } catch (error) {
+
+    console.log("CREATE ORDER ERROR => ", error);
+
     res.status(500).json({
+      success: false,
       message: error.message,
     });
   }

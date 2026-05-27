@@ -1,85 +1,185 @@
 const mongoose = require("mongoose");
-const { ORDER_CATEGORIES } = require("../controllers/orderController");
 
-const orderItemSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  title: { type: String, required: true },
-  image: { type: String },
-  rating: { type: Number },
-  quantity: { type: Number, required: true, min: 1 },
-  price: { type: Number },
-});
+// ===================================
+// ORDER CATEGORIES
+// ===================================
 
-const orderSchema = new mongoose.Schema(
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+const ORDER_CATEGORIES = [
+  "Electronics",
+  "Fashion",
+  "Footwear",
+  "Accessories",
+  "Bags",
+  "Groceries",
+  "Home",
+  "Beauty",
+  "Sports",
+  "Other",
+];
 
-    // ── Flipkart-style Category ──────────────────────────────────────────────
-    category: {
+// ===================================
+// ORDER ITEM SCHEMA
+// ===================================
+
+const orderItemSchema =
+  new mongoose.Schema({
+    id: {
       type: String,
-      enum: ORDER_CATEGORIES,
-      default: "Other",
       required: true,
     },
 
-    items: [orderItemSchema],
+    title: {
+      type: String,
+      required: true,
+    },
 
-    totalPrice: {
+    image: {
+      type: String,
+    },
+
+    rating: {
+      type: Number,
+      default: 0,
+    },
+
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+
+    price: {
       type: Number,
       required: true,
     },
+  });
 
-    status: {
-      type: String,
-      enum: ["pending", "accepted", "picked", "delivered"],
-      default: "pending",
-    },
+// ===================================
+// ORDER SCHEMA
+// ===================================
 
-    shippingAddress: {
-      name: String,
-      phone: String,
-      address: String,
-      city: String,
-      pincode: String,
-      state: String,
-    },
+const orderSchema =
+  new mongoose.Schema(
+    {
+      user: {
+        type:
+          mongoose.Schema.Types.ObjectId,
 
-    paymentMethod: {
-      type: String,
-      enum: ["COD", "UPI", "Card", "Wallet"],
-      default: "COD",
-    },
+        ref: "User",
 
-    isPaid: {
-      type: Boolean,
-      default: false,
-    },
+        required: true,
+      },
 
-    paidAt: {
-      type: Date,
-    },
+      // CATEGORY
+      category: {
+        type: String,
 
-    isDelivered: {
-      type: Boolean,
-      default: false,
-    },
+        enum: ORDER_CATEGORIES,
 
-    deliveredAt: {
-      type: Date,
+        default: "Other",
+
+        required: true,
+      },
+
+      // ITEMS
+      items: {
+        type: [orderItemSchema],
+
+        required: true,
+      },
+
+      // TOTAL PRICE
+      totalPrice: {
+        type: Number,
+
+        required: true,
+      },
+
+      // ORDER STATUS
+      status: {
+        type: String,
+
+        enum: [
+          "pending",
+          "accepted",
+          "picked",
+          "delivered",
+        ],
+
+        default: "pending",
+      },
+
+      // SHIPPING
+      shippingAddress: {
+        name: String,
+        phone: String,
+        address: String,
+        city: String,
+        pincode: String,
+        state: String,
+      },
+
+      // PAYMENT
+      paymentMethod: {
+        type: String,
+
+        enum: [
+          "COD",
+          "UPI",
+          "Card",
+          "Wallet",
+        ],
+
+        default: "COD",
+      },
+
+      isPaid: {
+        type: Boolean,
+        default: false,
+      },
+
+      paidAt: {
+        type: Date,
+      },
+
+      // DELIVERY
+      isDelivered: {
+        type: Boolean,
+        default: false,
+      },
+
+      deliveredAt: {
+        type: Date,
+      },
     },
-  },
-  {
-    timestamps: true,
-  }
+    {
+      timestamps: true,
+    },
+  );
+
+// ===================================
+// INDEXES
+// ===================================
+
+orderSchema.index({
+  category: 1,
+});
+
+orderSchema.index({
+  user: 1,
+  category: 1,
+});
+
+orderSchema.index({
+  status: 1,
+  category: 1,
+});
+
+// ===================================
+// EXPORT
+// ===================================
+
+module.exports = mongoose.model(
+  "Order",
+  orderSchema,
 );
-
-// ── Index for fast category queries ─────────────────────────────────────────
-orderSchema.index({ category: 1 });
-orderSchema.index({ user: 1, category: 1 });
-orderSchema.index({ status: 1, category: 1 });
-
-module.exports = mongoose.model("Order", orderSchema);
