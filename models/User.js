@@ -2,11 +2,19 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
+    // ===================================
+    // NAME
+    // ===================================
+
     name: {
       type: String,
       required: true,
       trim: true,
     },
+
+    // ===================================
+    // EMAIL
+    // ===================================
 
     email: {
       type: String,
@@ -16,12 +24,29 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // ===================================
+    // PHONE
+    // ===================================
+
+    phone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    // ===================================
+    // PASSWORD
+    // ===================================
+
     password: {
       type: String,
       required: true,
     },
 
-    // ✅ ADD THIS
+    // ===================================
+    // ROLE
+    // ===================================
+
     role: {
       type: String,
 
@@ -31,6 +56,15 @@ const userSchema = new mongoose.Schema(
       ],
 
       default: "user",
+    },
+
+    // ===================================
+    // REFRESH TOKEN
+    // ===================================
+
+    refreshToken: {
+      type: String,
+      default: null, // for silent re-auth
     },
   },
 

@@ -8,6 +8,9 @@ const orderRoutes = require("./routes/orderRoutes");
 const connectDB = require("./config/db");
 const Message = require("./models/Message");
 const productRoutes = require("./routes/productRoutes");
+const contentRoutes = require("./routes/content")
+const supportRoutes = require("./routes/supportRoutes")
+const userRoutes = require('./routes/userRoutes')
 // ==========================
 // CONFIG
 // ==========================
@@ -32,7 +35,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: "*",
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   })
 );
 
@@ -42,6 +45,9 @@ app.use(
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/orders", orderRoutes);
 app.use("/api/products", productRoutes);
+app.use('/api/content',contentRoutes);
+app.use("/api/user",userRoutes)
+app.use("/api/support",supportRoutes)
 app.get("/", (req, res) => {
   res.send("API RUNNING");
 });

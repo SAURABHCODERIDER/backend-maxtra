@@ -1,23 +1,13 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-// ===================================
-// AUTHENTICATION
-// ===================================
+// ==============================
+// AUTH MIDDLEWARE
+// ==============================
 
-const isAuthenticated = async (
-  req,
-  res,
-  next,
-) => {
+const isAuthenticated = async (req, res, next) => {
   try {
-
-    const authHeader =
-      req.headers.authorization;
-
-    // =========================
-    // TOKEN CHECK
-    // =========================
+    const authHeader = req.headers.authorization;
 
     if (!authHeader) {
       return res.status(401).json({
@@ -26,54 +16,19 @@ const isAuthenticated = async (
       });
     }
 
-    // =========================
-    // GET TOKEN
-    // =========================
-
-    const token =
-      authHeader.startsWith("Bearer ")
-        ? authHeader.split(" ")[1]
-        : authHeader;
-
-    console.log("TOKEN => ", token);
-
-    // =========================
-    // VERIFY TOKEN
-    // =========================
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : authHeader;
 
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || "secret"
     );
-
-    console.log(
-      "DECODED TOKEN => ",
-      decoded,
-    );
-
-    // =========================
-    // GET USER ID
-    // =========================
 
     const userId =
-      decoded.userId ||
-      decoded.id ||
-      decoded._id;
+      decoded.id || decoded._id || decoded.userId;
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid token payload",
-      });
-    }
-
-    // =========================
-    // FIND USER
-    // =========================
-
-    const user =
-      await User.findById(userId)
-        .select("-password");
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(401).json({
@@ -82,26 +37,11 @@ const isAuthenticated = async (
       });
     }
 
-    // =========================
-    // SAVE USER
-    // =========================
-
     req.user = user;
-
-    console.log(
-      "AUTH USER => ",
-      req.user,
-    );
+    req.userId = user._id;
 
     next();
-
   } catch (error) {
-
-    console.log(
-      "AUTH ERROR => ",
-      error,
-    );
-
     return res.status(401).json({
       success: false,
       message: "Invalid token",
@@ -109,21 +49,13 @@ const isAuthenticated = async (
   }
 };
 
-// ===================================
-// ADMIN CHECK
-// ===================================
+// ==============================
+// ADMIN MIDDLEWARE
+// ==============================
 
-const isAdmin = (
-  req,
-  res,
-  next,
-) => {
-
+const isAdmin = (req, res, next) => {
   try {
-
-    if (
-      req.user?.role !== "admin"
-    ) {
+    if (req.user?.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Admin access denied",
@@ -131,14 +63,7 @@ const isAdmin = (
     }
 
     next();
-
   } catch (error) {
-
-    console.log(
-      "ADMIN ERROR => ",
-      error,
-    );
-
     return res.status(500).json({
       success: false,
       message: error.message,
