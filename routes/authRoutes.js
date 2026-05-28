@@ -2,26 +2,27 @@ const express = require("express");
 const router  = express.Router();
 const bcrypt  = require("bcryptjs");
 const jwt     = require("jsonwebtoken");
-const User    = require("../models/User");
+
+const User = require("../models/User");
 
 const { isAuthenticated, isAdmin } = require("../middleware/auth");
 
-// ==============================
+// ======================================================
 // GENERATE TOKENS
-// ==============================
+// ======================================================
 
 const generateTokens = (userId) => {
 
   const accessToken = jwt.sign(
     { id: userId },
-    process.env.JWT_SECRET,
-    { expiresIn: "15m" }
+    process.env.JWT_SECRET || "secret",
+    { expiresIn: "15m" },
   );
 
   const refreshToken = jwt.sign(
     { id: userId },
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: "7d" }
+    process.env.JWT_REFRESH_SECRET || "refresh_secret",
+    { expiresIn: "7d" },
   );
 
   return { accessToken, refreshToken };
@@ -33,40 +34,47 @@ const generateTokens = (userId) => {
 // ======================================================
 
 router.post("/register", async (req, res) => {
+
+  const { name, email, phone, password } = req.body;
+
+  // ===================================
+  // VALIDATION
+  // ===================================
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: "Name is required.",
+    });
+  }
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid email is required.",
+    });
+  }
+
+  if (!password || password.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must be at least 6 characters.",
+    });
+  }
+
+  if (phone && !/^\d{10}$/.test(phone.trim())) {
+    return res.status(400).json({
+      success: false,
+      message: "Enter valid 10-digit phone number.",
+    });
+  }
+
   try {
 
-    const { name, email, phone, password } = req.body;
-
-    // VALIDATION
-    if (!name?.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Name is required",
-      });
-    }
-
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Valid email is required",
-      });
-    }
-
-    if (!password || password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 6 characters",
-      });
-    }
-
-    if (phone && !/^\d{10}$/.test(phone.trim())) {
-      return res.status(400).json({
-        success: false,
-        message: "Enter valid 10-digit phone number",
-      });
-    }
-
+    // ===================================
     // CHECK EXISTING USER
+    // ===================================
+
     const existingUser = await User.findOne({
       email: email.toLowerCase(),
     });
@@ -74,28 +82,43 @@ router.post("/register", async (req, res) => {
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: "Email already registered",
+        message: "Email already registered.",
       });
     }
 
+    // ===================================
     // HASH PASSWORD
+    // ===================================
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // ===================================
     // CREATE USER
+    // ===================================
+
     const user = await User.create({
       name:     name.trim(),
       email:    email.toLowerCase(),
       phone:    phone ? phone.trim() : "",
       password: hashedPassword,
-      role:     "user",
     });
 
+    // ===================================
     // GENERATE TOKENS
+    // ===================================
+
     const { accessToken, refreshToken } = generateTokens(user._id);
 
+    // ===================================
     // SAVE REFRESH TOKEN
+    // ===================================
+
     user.refreshToken = refreshToken;
     await user.save();
+
+    // ===================================
+    // RESPONSE
+    // ===================================
 
     return res.status(201).json({
       success: true,
@@ -103,7 +126,7 @@ router.post("/register", async (req, res) => {
       accessToken,
       refreshToken,
       user: {
-        _id:   user._id,
+        id:    user._id,
         name:  user.name,
         email: user.email,
         phone: user.phone,
@@ -112,8 +135,7 @@ router.post("/register", async (req, res) => {
     });
 
   } catch (error) {
-
-    console.log("REGISTER ERROR =>", error);
+    console.log("REGISTER ERROR => ", error);
     return res.status(500).json({
       success: false,
       message: "Server error. Could not register.",
@@ -127,19 +149,26 @@ router.post("/register", async (req, res) => {
 // ======================================================
 
 router.post("/login", async (req, res) => {
+
+  const { email, password } = req.body;
+
+  // ===================================
+  // VALIDATION
+  // ===================================
+
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      message: "Email and password are required.",
+    });
+  }
+
   try {
 
-    const { email, password } = req.body;
-
-    // VALIDATION
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
-      });
-    }
-
+    // ===================================
     // FIND USER
+    // ===================================
+
     const user = await User.findOne({
       email: email.toLowerCase(),
     });
@@ -147,26 +176,39 @@ router.post("/login", async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid email or password.",
       });
     }
 
+    // ===================================
     // CHECK PASSWORD
+    // ===================================
+
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid email or password.",
       });
     }
 
+    // ===================================
     // GENERATE TOKENS
+    // ===================================
+
     const { accessToken, refreshToken } = generateTokens(user._id);
 
+    // ===================================
     // SAVE REFRESH TOKEN
+    // ===================================
+
     user.refreshToken = refreshToken;
     await user.save();
+
+    // ===================================
+    // RESPONSE
+    // ===================================
 
     return res.status(200).json({
       success: true,
@@ -174,7 +216,7 @@ router.post("/login", async (req, res) => {
       accessToken,
       refreshToken,
       user: {
-        _id:   user._id,
+        id:    user._id,
         name:  user.name,
         email: user.email,
         phone: user.phone,
@@ -183,8 +225,7 @@ router.post("/login", async (req, res) => {
     });
 
   } catch (error) {
-
-    console.log("LOGIN ERROR =>", error);
+    console.log("LOGIN ERROR => ", error);
     return res.status(500).json({
       success: false,
       message: "Server error. Could not login.",
@@ -198,24 +239,23 @@ router.post("/login", async (req, res) => {
 // ======================================================
 
 router.post("/refresh-token", async (req, res) => {
+
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json({
+      success: false,
+      message: "Refresh token required",
+    });
+  }
+
   try {
 
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        message: "Refresh token required",
-      });
-    }
-
-    // VERIFY REFRESH TOKEN
     const decoded = jwt.verify(
       refreshToken,
-      process.env.JWT_REFRESH_SECRET
+      process.env.JWT_REFRESH_SECRET || "refresh_secret",
     );
 
-    // FIND USER
     const user = await User.findById(decoded.id);
 
     if (!user || user.refreshToken !== refreshToken) {
@@ -225,21 +265,18 @@ router.post("/refresh-token", async (req, res) => {
       });
     }
 
-    // GENERATE NEW TOKENS
     const tokens = generateTokens(user._id);
-
     user.refreshToken = tokens.refreshToken;
     await user.save();
 
     return res.status(200).json({
-      success: true,
+      success:      true,
       accessToken:  tokens.accessToken,
       refreshToken: tokens.refreshToken,
     });
 
   } catch (error) {
-
-    console.log("REFRESH TOKEN ERROR =>", error);
+    console.log("REFRESH TOKEN ERROR => ", error);
     return res.status(401).json({
       success: false,
       message: "Invalid or expired refresh token",
@@ -255,9 +292,7 @@ router.post("/refresh-token", async (req, res) => {
 router.post("/logout", isAuthenticated, async (req, res) => {
   try {
 
-    await User.findByIdAndUpdate(req.userId, {
-      refreshToken: null,
-    });
+    await User.findByIdAndUpdate(req.userId, { refreshToken: null });
 
     return res.status(200).json({
       success: true,
@@ -265,8 +300,7 @@ router.post("/logout", isAuthenticated, async (req, res) => {
     });
 
   } catch (error) {
-
-    console.log("LOGOUT ERROR =>", error);
+    console.log("LOGOUT ERROR => ", error);
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -282,9 +316,7 @@ router.post("/logout", isAuthenticated, async (req, res) => {
 router.get("/me", isAuthenticated, async (req, res) => {
   try {
 
-    const user = await User.findById(req.userId).select(
-      "-password -refreshToken"
-    );
+    const user = await User.findById(req.userId).select("-password -refreshToken");
 
     if (!user) {
       return res.status(404).json({
@@ -299,8 +331,7 @@ router.get("/me", isAuthenticated, async (req, res) => {
     });
 
   } catch (error) {
-
-    console.log("ME ERROR =>", error);
+    console.log("ME ERROR => ", error);
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -309,40 +340,19 @@ router.get("/me", isAuthenticated, async (req, res) => {
 });
 
 // ======================================================
-// GET ALL USERS  (ADMIN ONLY)
-// GET /auth/users
-// ======================================================
-
-router.get("/users", isAuthenticated, isAdmin, async (req, res) => {
-  try {
-
-    const users = await User.find().select("-password -refreshToken");
-
-    return res.status(200).json({
-      success: true,
-      users,
-    });
-
-  } catch (error) {
-
-    console.log("GET USERS ERROR =>", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
-  }
-});
-
-// ======================================================
-// ADMIN ONLY TEST ROUTE
+// ADMIN ONLY
 // GET /auth/admin-only
 // ======================================================
 
-router.get("/admin-only", isAuthenticated, isAdmin, (req, res) => {
+router.get("/admin-only", isAuthenticated, isAdmin, async (req, res) => {
   return res.status(200).json({
     success: true,
     message: "Welcome Admin",
   });
 });
+
+// ======================================================
+// EXPORT
+// ======================================================
 
 module.exports = router;

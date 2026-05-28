@@ -1,41 +1,61 @@
-const jwt = require("jsonwebtoken");
+const jwt  = require("jsonwebtoken");
 const User = require("../models/User");
 
-// ==============================
-// IS AUTHENTICATED
-// ==============================
+// ======================================================
+// AUTH MIDDLEWARE
+// ======================================================
 
 const isAuthenticated = async (req, res, next) => {
   try {
 
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // ===================================
+    // CHECK TOKEN
+    // ===================================
+
+    if (!authHeader) {
       return res.status(401).json({
         success: false,
         message: "No token provided",
       });
     }
 
-    const token = authHeader.split(" ")[1];
+    // ===================================
+    // GET TOKEN
+    // ===================================
 
-    if (!token) {
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : authHeader;
+
+    // ===================================
+    // VERIFY TOKEN
+    // ===================================
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "secret",
+    );
+
+    // ===================================
+    // GET USER ID
+    // ===================================
+
+    const userId = decoded.userId || decoded.id || decoded._id;
+
+    if (!userId) {
       return res.status(401).json({
         success: false,
-        message: "Token missing",
+        message: "Invalid token payload",
       });
     }
 
-    // VERIFY TOKEN
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
-
+    // ===================================
     // FIND USER
-    const user = await User.findById(decoded.id).select(
-      "-password -refreshToken"
-    );
+    // ===================================
+
+    const user = await User.findById(userId).select("-password");
 
     if (!user) {
       return res.status(401).json({
@@ -44,37 +64,51 @@ const isAuthenticated = async (req, res, next) => {
       });
     }
 
+    // ===================================
+    // SAVE USER
+    // ===================================
+
     req.user   = user;
     req.userId = user._id;
 
     next();
 
   } catch (error) {
-
-    console.log("AUTH ERROR =>", error.message);
-
+    console.log("AUTH ERROR => ", error);
     return res.status(401).json({
       success: false,
-      message:
-        error.name === "TokenExpiredError"
-          ? "Token expired, please login again"
-          : "Invalid token",
+      message: "Invalid token",
     });
   }
 };
 
-// ==============================
-// IS ADMIN
-// ==============================
+// ======================================================
+// ADMIN MIDDLEWARE
+// ======================================================
 
 const isAdmin = (req, res, next) => {
-  if (req.user?.role !== "admin") {
-    return res.status(403).json({
+  try {
+
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Admin access denied",
+      });
+    }
+
+    next();
+
+  } catch (error) {
+    console.log("ADMIN ERROR => ", error);
+    return res.status(500).json({
       success: false,
-      message: "Admin access denied",
+      message: error.message,
     });
   }
-  next();
 };
+
+// ======================================================
+// ✅ EXPORT FUNCTIONS — not router
+// ======================================================
 
 module.exports = { isAuthenticated, isAdmin };

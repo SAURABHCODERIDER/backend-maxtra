@@ -1,5 +1,10 @@
 const express = require("express");
-const router  = express.Router();
+
+const router = express.Router();
+
+// ===============================
+// CONTROLLERS
+// ===============================
 
 const {
   createOrder,
@@ -12,42 +17,86 @@ const {
   getCategories,
 } = require("../controllers/orderController");
 
-const { isAuthenticated, isAdmin } = require("../middleware/auth");
+// ===============================
+// MIDDLEWARE
+// ===============================
+
+const {
+  isAuthenticated,
+  isAdmin,
+} = require("../middleware/auth");
 
 // ======================================================
 // PUBLIC ROUTES
 // ======================================================
 
 // GET ALL CATEGORIES
-router.get("/categories", getCategories);
+router.get(
+  "/categories",
+  getCategories
+);
 
 // ======================================================
-// USER ROUTES  (login required)
+// USER ROUTES
 // ======================================================
 
 // CREATE ORDER
-router.post("/", isAuthenticated, createOrder);
+router.post(
+  "/",
+  isAuthenticated,
+  createOrder
+);
 
 // GET MY ORDERS
-router.get("/my-orders", isAuthenticated, getMyOrders);
+router.get(
+  "/my-orders",
+  isAuthenticated,
+  getMyOrders
+);
 
 // GET SINGLE ORDER
-router.get("/:id", isAuthenticated, getSingleOrder);
+router.get(
+  "/:id",
+  isAuthenticated,
+  getSingleOrder
+);
 
 // ======================================================
-// ADMIN ROUTES  (admin only)
+// ADMIN ROUTES
 // ======================================================
 
 // GET ALL ORDERS
-router.get("/", isAuthenticated, isAdmin, getAllOrders);
+router.get(
+  "/",
+  isAuthenticated,
+  isAdmin,
+  getAllOrders
+);
 
 // UPDATE ORDER STATUS
-router.patch("/:id/status", isAuthenticated, isAdmin, updateOrderStatus);
+router.patch(
+  "/:id/status",
+  isAuthenticated,
+  isAdmin,
+  updateOrderStatus
+);
 
 // UPDATE ORDER CATEGORY
-router.patch("/:id/category", isAuthenticated, isAdmin, updateOrderCategory);
+router.patch(
+  "/:id/category",
+  isAuthenticated,
+  isAdmin,
+  updateOrderCategory
+);
 
 // DELETE ORDER
-router.delete("/:id", isAuthenticated, isAdmin, deleteOrder);
+router.delete(
+  "/:id",
+  isAuthenticated,
+  isAdmin,
+  deleteOrder
+);
+
+// ======================================================
 
 module.exports = router;
