@@ -1,8 +1,8 @@
 const Order = require("../models/Order");
 
-// ===============================
+// ==============================
 // CATEGORIES
-// ===============================
+// ==============================
 
 const ORDER_CATEGORIES = [
   "Electronics",
@@ -20,19 +20,14 @@ const ORDER_CATEGORIES = [
   "Other",
 ];
 
-// ===============================
+// ==============================
 // CREATE ORDER
-// ===============================
+// ==============================
 
 const createOrder = async (req, res) => {
   try {
-    const {
-      items,
-      totalPrice,
-      shippingAddress,
-      paymentMethod,
-      category,
-    } = req.body;
+
+    const { items, totalPrice, shippingAddress, paymentMethod, category } = req.body;
 
     const order = await Order.create({
       user: req.user._id,
@@ -50,8 +45,7 @@ const createOrder = async (req, res) => {
 
   } catch (error) {
 
-    console.log(error);
-
+    console.log("CREATE ORDER ERROR =>", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -59,9 +53,9 @@ const createOrder = async (req, res) => {
   }
 };
 
-// ===============================
-// GET ALL ORDERS
-// ===============================
+// ==============================
+// GET ALL ORDERS  (admin)
+// ==============================
 
 const getAllOrders = async (req, res) => {
   try {
@@ -77,6 +71,7 @@ const getAllOrders = async (req, res) => {
 
   } catch (error) {
 
+    console.log("GET ALL ORDERS ERROR =>", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -84,16 +79,15 @@ const getAllOrders = async (req, res) => {
   }
 };
 
-// ===============================
+// ==============================
 // GET MY ORDERS
-// ===============================
+// ==============================
 
 const getMyOrders = async (req, res) => {
   try {
 
-    const orders = await Order.find({
-      user: req.user._id,
-    }).sort({ createdAt: -1 });
+    const orders = await Order.find({ user: req.user._id })
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -102,6 +96,7 @@ const getMyOrders = async (req, res) => {
 
   } catch (error) {
 
+    console.log("GET MY ORDERS ERROR =>", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -109,18 +104,49 @@ const getMyOrders = async (req, res) => {
   }
 };
 
-// ===============================
+// ==============================
 // GET SINGLE ORDER
-// ===============================
+// ==============================
 
 const getSingleOrder = async (req, res) => {
   try {
 
-    const order = await Order.findById(
-      req.params.id
-    ).populate(
-      "user",
-      "name email"
+    const order = await Order.findById(req.params.id)
+      .populate("user", "name email");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      order,
+    });
+
+  } catch (error) {
+
+    console.log("GET SINGLE ORDER ERROR =>", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ==============================
+// UPDATE ORDER STATUS  (admin)
+// ==============================
+
+const updateOrderStatus = async (req, res) => {
+  try {
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status: req.body.status },
+      { new: true }
     );
 
     if (!order) {
@@ -137,6 +163,7 @@ const getSingleOrder = async (req, res) => {
 
   } catch (error) {
 
+    console.log("UPDATE STATUS ERROR =>", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -144,55 +171,25 @@ const getSingleOrder = async (req, res) => {
   }
 };
 
-// ===============================
-// UPDATE STATUS
-// ===============================
-
-const updateOrderStatus = async (req, res) => {
-  try {
-
-    const order =
-      await Order.findByIdAndUpdate(
-        req.params.id,
-        {
-          status: req.body.status,
-        },
-        {
-          new: true,
-        }
-      );
-
-    return res.status(200).json({
-      success: true,
-      order,
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// ===============================
-// UPDATE CATEGORY
-// ===============================
+// ==============================
+// UPDATE ORDER CATEGORY  (admin)
+// ==============================
 
 const updateOrderCategory = async (req, res) => {
   try {
 
-    const order =
-      await Order.findByIdAndUpdate(
-        req.params.id,
-        {
-          category: req.body.category,
-        },
-        {
-          new: true,
-        }
-      );
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { category: req.body.category },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -201,6 +198,7 @@ const updateOrderCategory = async (req, res) => {
 
   } catch (error) {
 
+    console.log("UPDATE CATEGORY ERROR =>", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -208,16 +206,21 @@ const updateOrderCategory = async (req, res) => {
   }
 };
 
-// ===============================
-// DELETE ORDER
-// ===============================
+// ==============================
+// DELETE ORDER  (admin)
+// ==============================
 
 const deleteOrder = async (req, res) => {
   try {
 
-    await Order.findByIdAndDelete(
-      req.params.id
-    );
+    const order = await Order.findByIdAndDelete(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -226,6 +229,7 @@ const deleteOrder = async (req, res) => {
 
   } catch (error) {
 
+    console.log("DELETE ORDER ERROR =>", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -233,9 +237,9 @@ const deleteOrder = async (req, res) => {
   }
 };
 
-// ===============================
+// ==============================
 // GET CATEGORIES
-// ===============================
+// ==============================
 
 const getCategories = async (req, res) => {
   try {
@@ -247,6 +251,7 @@ const getCategories = async (req, res) => {
 
   } catch (error) {
 
+    console.log("GET CATEGORIES ERROR =>", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -254,9 +259,9 @@ const getCategories = async (req, res) => {
   }
 };
 
-// ===============================
+// ==============================
 // EXPORTS
-// ===============================
+// ==============================
 
 module.exports = {
   createOrder,
