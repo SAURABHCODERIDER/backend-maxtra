@@ -59,7 +59,8 @@ app.get("/", (req, res) => {
 const io = new Server(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
   },
   pingTimeout: 60000,
   pingInterval: 25000,

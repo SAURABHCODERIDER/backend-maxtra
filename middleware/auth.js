@@ -4,31 +4,48 @@ const User = require("../models/User");
 // ==============================
 // AUTH MIDDLEWARE
 // ==============================
-
 const isAuthenticated = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
+    // ❌ NO HEADER
     if (!authHeader) {
       return res.status(401).json({
         success: false,
-        message: "No token provided",
+        message: "Authorization header missing",
       });
     }
 
+    // ✅ TOKEN EXTRACT
     const token = authHeader.startsWith("Bearer ")
       ? authHeader.split(" ")[1]
       : authHeader;
 
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Token not provided",
+      });
+    }
+
+    // ✅ VERIFY TOKEN
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET || "secret"
     );
 
-    const userId =
-      decoded.id || decoded._id || decoded.userId;
+    // 🔥 FIX: unified id handling
+    const userId = decoded.id || decoded._id || decoded.userId;
 
-    const user = await User.findById(userId);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token payload",
+      });
+    }
+
+    // ✅ FIND USER
+    const user = await User.findById(userId).select("-password");
 
     if (!user) {
       return res.status(401).json({
@@ -37,14 +54,18 @@ const isAuthenticated = async (req, res, next) => {
       });
     }
 
+    // ✅ ATTACH USER
     req.user = user;
-    req.userId = user._id;
+    req.userId = user._id.toString();
 
     next();
+
   } catch (error) {
+    console.log("AUTH ERROR:", error.message);
+
     return res.status(401).json({
       success: false,
-      message: "Invalid token",
+      message: "Invalid or expired token",
     });
   }
 };
@@ -52,10 +73,16 @@ const isAuthenticated = async (req, res, next) => {
 // ==============================
 // ADMIN MIDDLEWARE
 // ==============================
-
 const isAdmin = (req, res, next) => {
   try {
-    if (req.user?.role !== "admin") {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Admin access denied",
@@ -63,10 +90,13 @@ const isAdmin = (req, res, next) => {
     }
 
     next();
+
   } catch (error) {
+    console.log("ADMIN ERROR:", error.message);
+
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Server error",
     });
   }
 };
