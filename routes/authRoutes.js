@@ -339,6 +339,34 @@ router.get("/me", isAuthenticated, async (req, res) => {
   }
 });
 
+
+router.get(
+  "/users",
+  isAuthenticated,
+  async (req, res) => {
+    try {
+
+      const users = await User.find()
+        .select("-password -refreshToken");
+
+      return res.status(200).json(users);
+
+    } catch (error) {
+
+      console.log(
+        "GET USERS ERROR => ",
+        error,
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch users",
+      });
+
+    }
+  }
+);
+
 // ======================================================
 // ADMIN ONLY
 // GET /auth/admin-only
