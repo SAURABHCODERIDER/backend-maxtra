@@ -3,12 +3,17 @@ const router   = express.Router();
 const bcrypt   = require('bcryptjs');
 const User     = require('../models/User');
 const NotifSettings = require('../models/NotifSettings');
-
+const {
+  isAuthenticated,
+} = require('../middleware/auth');
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /user/notification-settings
 // Returns current notification preferences for logged-in user
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/notification-settings', async (req, res) => {
+router.get(
+  '/notification-settings',
+  isAuthenticated,
+  async (req, res) => {
   try {
     let settings = await NotifSettings.findOne({ userId: req.userId });
 
@@ -52,7 +57,10 @@ const VALID_KEYS = [
   'orderUpdates', 'promotions', 'reminders',
 ];
 
-router.patch('/notification-settings', async (req, res) => {
+router.patch(
+  '/notification-settings',
+  isAuthenticated,
+  async (req, res) => {
   const update = {};
 
   // Allow only recognised boolean keys
@@ -95,7 +103,10 @@ router.patch('/notification-settings', async (req, res) => {
 // Updates name, phone and optionally password
 // Body: { name, phone, currentPassword?, newPassword? }
 // ─────────────────────────────────────────────────────────────────────────────
-router.put('/profile', async (req, res) => {
+router.put(
+  '/profile',
+  isAuthenticated,
+  async (req, res) => {
   const { name, phone, currentPassword, newPassword } = req.body;
 
   // ── Validation ──────────────────────────────────────────────────────────────
@@ -135,13 +146,16 @@ router.put('/profile', async (req, res) => {
     await user.save();
 
     return res.status(200).json({
-      message: 'Profile updated successfully.',
-      user: {
-        name:  user.name,
-        email: user.email,
-        phone: user.phone,
-      },
-    });
+  success: true,
+  message: 'Profile updated successfully.',
+  user: {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+  },
+});
   } catch (err) {
     console.error('PUT /user/profile error:', err);
     return res.status(500).json({ message: 'Server error. Could not update profile.' });
