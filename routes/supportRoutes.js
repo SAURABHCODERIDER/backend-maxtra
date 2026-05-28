@@ -1,13 +1,18 @@
 const express = require('express');
 const router  = express.Router();
 const Ticket  = require('../models/Ticket');
-
+const {
+  isAuthenticated,
+} = require('../middleware/auth');
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /support/ticket
 // Creates a new support ticket (auth required)
 // Body: { subject: string, message: string }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/ticket', async (req, res) => {
+router.post(
+  '/ticket',
+  isAuthenticated,
+  async (req, res) => {
   const { subject, message } = req.body;
 
   // ── Validation ──────────────────────────────────────────────────────────────

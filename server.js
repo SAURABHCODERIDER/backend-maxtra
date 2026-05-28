@@ -48,6 +48,7 @@ app.use("/api/products", productRoutes);
 app.use('/api/content',contentRoutes);
 app.use("/api/user",userRoutes)
 app.use("/api/support",supportRoutes)
+
 app.get("/", (req, res) => {
   res.send("API RUNNING");
 });
