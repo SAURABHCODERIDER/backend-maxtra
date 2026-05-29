@@ -8,9 +8,10 @@ const orderRoutes = require("./routes/orderRoutes");
 const connectDB = require("./config/db");
 const Message = require("./models/Message");
 const productRoutes = require("./routes/productRoutes");
-const contentRoutes = require("./routes/content")
-const supportRoutes = require("./routes/supportRoutes")
-const userRoutes = require('./routes/userRoutes')
+const contentRoutes = require("./routes/content");
+const supportRoutes = require("./routes/supportRoutes");
+const userRoutes = require("./routes/userRoutes");
+
 // ==========================
 // CONFIG
 // ==========================
@@ -42,12 +43,13 @@ app.use(
 // ==========================
 // ROUTES
 // ==========================
+
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/orders", orderRoutes);
 app.use("/api/products", productRoutes);
-app.use('/api/content',contentRoutes);
-app.use("/api/user",userRoutes)
-app.use("/api/support",supportRoutes)
+app.use("/api/content", contentRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/support", supportRoutes);
 
 app.get("/", (req, res) => {
   res.send("API RUNNING");
@@ -61,7 +63,7 @@ const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization"],
   },
   pingTimeout: 60000,
   pingInterval: 25000,
@@ -75,7 +77,7 @@ const io = new Server(server, {
 const onlineUsers = new Map();
 
 // ==========================
-// EMIT TO USER
+// EMIT TO USER (personal room)
 // ==========================
 
 const emitToUser = (userId, event, data = {}) => {
@@ -95,7 +97,6 @@ io.use((socket, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     socket.user = decoded;
 
     next();
@@ -114,49 +115,42 @@ io.on("connection", (socket) => {
 
   // ==========================
   // CURRENT USER ID
+  // Supports id, _id, userId in token
   // ==========================
 
- const currentUserId =
+  const currentUserId =
     socket.user?.id?.toString() ||
     socket.user?._id?.toString() ||
     socket.user?.userId?.toString();
 
   if (!currentUserId) {
     console.log("❌ USER ID NOT FOUND IN TOKEN");
+    socket.disconnect(true);
     return;
   }
 
   console.log("👤 USER CONNECTED:", currentUserId);
+
   // ==========================
   // JOIN PERSONAL ROOM
+  // Caller uses emitToUser(userId, ...) which sends to this room
   // ==========================
 
-  if (currentUserId) {
-    socket.join(currentUserId);
+  socket.join(currentUserId);
+  onlineUsers.set(currentUserId, socket.id);
 
-    onlineUsers.set(currentUserId, socket.id);
+  io.emit("online_users", Array.from(onlineUsers.keys()));
+  socket.broadcast.emit("user_online", { userId: currentUserId });
 
-    // send online users list
-    io.emit("online_users", Array.from(onlineUsers.keys()));
-
-    // notify others
-    socket.broadcast.emit("user_online", {
-      userId: currentUserId,
-    });
-
-    console.log(
-      `🟢 ${currentUserId} ONLINE | TOTAL: ${onlineUsers.size}`
-    );
-  }
+  console.log(`🟢 ${currentUserId} ONLINE | TOTAL: ${onlineUsers.size}`);
 
   // ==========================
-  // JOIN ROOM
+  // JOIN CHAT ROOM
   // ==========================
 
   socket.on("join_room", async (room) => {
     try {
       socket.join(room);
-
       console.log(`🏠 ${currentUserId} JOINED ROOM: ${room}`);
 
       const messages = await Message.find({ room })
@@ -166,20 +160,16 @@ io.on("connection", (socket) => {
       socket.emit("old_messages", messages);
     } catch (error) {
       console.log("❌ JOIN ROOM ERROR:", error.message);
-
-      socket.emit("error", {
-        message: "Failed to load messages",
-      });
+      socket.emit("error", { message: "Failed to load messages" });
     }
   });
 
   // ==========================
-  // LEAVE ROOM
+  // LEAVE CHAT ROOM
   // ==========================
 
   socket.on("leave_room", (room) => {
     socket.leave(room);
-
     console.log(`🚪 ${currentUserId} LEFT ROOM: ${room}`);
   });
 
@@ -189,35 +179,32 @@ io.on("connection", (socket) => {
 
   socket.on("send_message", async (data) => {
     try {
-      console.log(
-        `📩 MESSAGE: ${data.senderId} → ${data.receiverId}`
-      );
+      console.log(`📩 MESSAGE: ${data.senderId} → ${data.receiverId}`);
 
       const newMessage = await Message.create({
-        room: data.room,
-        senderId: data.senderId,
+        room      : data.room,
+        senderId  : data.senderId,
         receiverId: data.receiverId,
-        text: data.text,
+        text      : data.text,
       });
 
       const messageData = {
-        _id: newMessage._id,
-        room: newMessage.room,
-        senderId: newMessage.senderId,
+        _id       : newMessage._id,
+        room      : newMessage.room,
+        senderId  : newMessage.senderId,
         receiverId: newMessage.receiverId,
-        text: newMessage.text,
-        createdAt: newMessage.createdAt,
-        localId: data.localId ?? null,
-        status: "delivered",
+        text      : newMessage.text,
+        createdAt : newMessage.createdAt,
+        localId   : data.localId ?? null,
+        status    : "delivered",
       };
 
       io.to(data.room).emit("receive_message", messageData);
     } catch (error) {
       console.log("❌ SEND MESSAGE ERROR:", error.message);
-
       socket.emit("message_error", {
         localId: data.localId,
-        error: "Failed to send message",
+        error  : "Failed to send message",
       });
     }
   });
@@ -228,13 +215,8 @@ io.on("connection", (socket) => {
 
   socket.on("message_seen", async ({ messageId, room }) => {
     try {
-      await Message.findByIdAndUpdate(messageId, {
-        status: "seen",
-      });
-
-      socket.to(room).emit("message_seen", {
-        messageId,
-      });
+      await Message.findByIdAndUpdate(messageId, { status: "seen" });
+      socket.to(room).emit("message_seen", { messageId });
     } catch (error) {
       console.log("❌ MESSAGE SEEN ERROR:", error.message);
     }
@@ -244,86 +226,69 @@ io.on("connection", (socket) => {
   // TYPING
   // ==========================
 
-  socket.on("typing", (room) => {
-    socket.to(room).emit("typing");
-  });
-
-  socket.on("stop_typing", (room) => {
-    socket.to(room).emit("stop_typing");
-  });
+  socket.on("typing",      (room) => socket.to(room).emit("typing"));
+  socket.on("stop_typing", (room) => socket.to(room).emit("stop_typing"));
 
   // ==========================
-  // START VIDEO CALL
-  // ==========================
-
-  socket.on("start-video-call", (data) => {
-    console.log(
-      `📹 VIDEO CALL: ${data.from} → ${data.to}`
-    );
-
-    emitToUser(data.to, "incoming-video-call", {
-      from: data.from,
-      callerName: data.callerName ?? "Unknown",
-      type: "video",
-    });
-  });
-
-  // ==========================
-  // START AUDIO CALL
-  // ==========================
-
-  socket.on("start-audio-call", (data) => {
-    console.log(
-      `📞 AUDIO CALL: ${data.from} → ${data.to}`
-    );
-
-    emitToUser(data.to, "incoming-audio-call", {
-      from: data.from,
-      callerName: data.callerName ?? "Unknown",
-      type: "audio",
-    });
-  });
-
-  // ==========================
-  // CALL USER (WEBRTC)
+  // ✅ FIX: CALL-USER — WebRTC offer ke saath
+  // Frontend ab 'call-user' emit karta hai (pehle 'start-video-call' tha bina offer ke)
+  // Yahi main bug tha — offer undefined tha receiver ko
   // ==========================
 
   socket.on("call-user", (data) => {
-    const {
-      to,
-      from,
-      offer,
-      type,
-      callerName,
-    } = data;
+    const { to, from, offer, type, callerName } = data;
 
-    console.log(
-      `📲 CALL USER: ${from} → ${to} [${type}]`
-    );
+    // ✅ offer included in payload
+    if (!offer) {
+      console.warn(`⚠️ call-user from ${from} has no offer — receiver ka WebRTC fail hoga`);
+    }
 
-    const event =
-      type === "video"
-        ? "incoming-video-call"
-        : "incoming-audio-call";
+    console.log(`📲 CALL USER: ${from} → ${to} [${type}]`);
 
+    const event = type === "video" ? "incoming-video-call" : "incoming-audio-call";
+
+    // ✅ offer forward karo receiver ko
     emitToUser(to, event, {
       from,
-      offer,
+      offer,                        // ← yahi missing tha pehle
       type,
       callerName: callerName ?? "Unknown",
     });
   });
 
   // ==========================
-  // CALL ACCEPTED
+  // LEGACY HANDLERS (backward compat — agar purana code use ho)
+  // Inhe bhi fix kiya — offer forward ho sake
+  // ==========================
+
+  socket.on("start-video-call", (data) => {
+    console.log(`📹 (legacy) VIDEO CALL: ${data.from} → ${data.to}`);
+    // Offer nahi hoga yahan — isliye call-user use karna chahiye
+    emitToUser(data.to, "incoming-video-call", {
+      from      : data.from,
+      callerName: data.callerName ?? "Unknown",
+      type      : "video",
+      offer     : data.offer ?? null,       // null hoga agar legacy call
+    });
+  });
+
+  socket.on("start-audio-call", (data) => {
+    console.log(`📞 (legacy) AUDIO CALL: ${data.from} → ${data.to}`);
+    emitToUser(data.to, "incoming-audio-call", {
+      from      : data.from,
+      callerName: data.callerName ?? "Unknown",
+      type      : "audio",
+      offer     : data.offer ?? null,
+    });
+  });
+
+  // ==========================
+  // CALL ACCEPTED — answer forward karo caller ko
   // ==========================
 
   socket.on("call-accepted", ({ to, answer }) => {
     console.log(`✅ CALL ACCEPTED → ${to}`);
-
-    emitToUser(to, "call-accepted", {
-      answer,
-    });
+    emitToUser(to, "call-accepted", { answer });
   });
 
   // ==========================
@@ -332,7 +297,6 @@ io.on("connection", (socket) => {
 
   socket.on("reject-call", ({ to }) => {
     console.log(`❌ CALL REJECTED → ${to}`);
-
     emitToUser(to, "call-rejected");
   });
 
@@ -342,20 +306,16 @@ io.on("connection", (socket) => {
 
   socket.on("end-call", ({ to }) => {
     console.log(`☎️ CALL ENDED → ${to}`);
-
     emitToUser(to, "call-ended");
   });
 
   // ==========================
-  // ICE CANDIDATE
+  // ✅ ICE CANDIDATE — bidirectional
   // ==========================
 
   socket.on("ice-candidate", ({ to, candidate }) => {
     if (!candidate) return;
-
-    emitToUser(to, "ice-candidate", {
-      candidate,
-    });
+    emitToUser(to, "ice-candidate", { candidate });
   });
 
   // ==========================
@@ -363,26 +323,16 @@ io.on("connection", (socket) => {
   // ==========================
 
   socket.on("disconnect", (reason) => {
-    console.log(
-      `❌ SOCKET DISCONNECTED: ${socket.id} [${reason}]`
-    );
+    console.log(`❌ SOCKET DISCONNECTED: ${socket.id} [${reason}]`);
 
     if (currentUserId) {
       onlineUsers.delete(currentUserId);
-
-      io.emit(
-        "online_users",
-        Array.from(onlineUsers.keys())
-      );
-
+      io.emit("online_users", Array.from(onlineUsers.keys()));
       socket.broadcast.emit("user_offline", {
-        userId: currentUserId,
+        userId  : currentUserId,
         lastSeen: new Date().toISOString(),
       });
-
-      console.log(
-        `🔴 ${currentUserId} OFFLINE | TOTAL: ${onlineUsers.size}`
-      );
+      console.log(`🔴 ${currentUserId} OFFLINE | TOTAL: ${onlineUsers.size}`);
     }
   });
 });
